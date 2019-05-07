@@ -20,6 +20,11 @@ GList *file_list;
 char path[PATH_MAX];
 char base_dir[PATH_MAX];
 
+/**
+ * @brief This struct for pass the specific data
+ * to functions
+ *
+ */
 struct file_info {
   char path[PATH_MAX];
   struct stat status;
@@ -47,6 +52,14 @@ int main(void) {
   return 0;
 }
 
+/**
+ * @brief To watch the files(include directory).
+ * @details According to 'brief' properties.
+ * Program announces to user which file is modified and
+ * removes the files which is created by user.
+ *
+ * @param signo
+ */
 void task_handler(int signo) {
   static time_t acc_time = 0;
   acc_time += 5;
@@ -63,6 +76,11 @@ void task_handler(int signo) {
   update_every_10s(period_reach);
 }
 
+/**
+ * @brief This for end of the program
+ *
+ * @param signo
+ */
 void destructor_handler(int signo) {
   printf("\n\nINTERRUPT SIGNAL CATCH\n\n");
   g_list_foreach(file_list, (GFunc)g_free, NULL);
@@ -70,11 +88,24 @@ void destructor_handler(int signo) {
   exit(EXIT_SUCCESS);
 }
 
+/**
+ * @brief get the current directory status
+ *
+ * @param info
+ */
 void initializer(struct file_info *info) {
   file_list = g_list_append(file_list, info);
 }
 
-static bool compare_stat(const struct stat *src, const struct stat *dst) {
+/**
+ * @brief check the different about src and dst members.
+ *
+ * @param src
+ * @param dst
+ * @return true
+ * @return false
+ */
+static bool is_diff_stat(const struct stat *src, const struct stat *dst) {
   return !((src->st_uid == dst->st_uid)          // user id
            && (src->st_gid == dst->st_gid)       // group id
            && (src->st_size == dst->st_size)     // file size
@@ -82,6 +113,11 @@ static bool compare_stat(const struct stat *src, const struct stat *dst) {
            && (src->st_mtime == dst->st_mtime)); // modification time
 }
 
+/**
+ * @brief file and directory modify detection function
+ *
+ * @param check_entry
+ */
 void modify_detect(struct file_info *check_entry) {
   GList *it;
   for (it = file_list; it != NULL; it = it->next) {
@@ -91,7 +127,7 @@ void modify_detect(struct file_info *check_entry) {
       // file and directory name change check
       bool is_diff = strcmp(base_entry->path, check_entry->path);
       // status change check
-      is_diff |= compare_stat(&(base_entry->status), &(check_entry->status));
+      is_diff |= is_diff_stat(&(base_entry->status), &(check_entry->status));
       if (is_diff) {
         printf("\n[[ MODIFICATION ALERT ]]\n\n");
         printf("PREVIOUS FILE\t==>%s\nsize: %ld\taccess: %ld\tmodify: "
@@ -109,6 +145,11 @@ void modify_detect(struct file_info *check_entry) {
   }   // end of for
 }
 
+/**
+ * @brief detect the file which is created by some user. and delete the file
+ *
+ * @param check_entry
+ */
 void create_detect(struct file_info *check_entry) {
   GList *it;
   for (it = file_list; it != NULL; it = it->next) {
@@ -133,6 +174,12 @@ void create_detect(struct file_info *check_entry) {
   }   // end of if
 }
 
+/**
+ * @brief traverse all directory
+ *
+ * @param dir_name
+ * @param func
+ */
 void traverse(const char *dir_name, void (*func)(struct file_info *)) {
   int path_length = strlen(path);
   DIR *cur_dir;
